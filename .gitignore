@@ -1,0 +1,8 @@
+# Ignore everything by default
+*
+
+# Allow tracking of these files/directories
+!.gitignore
+!pom.xml
+!src/
+!src/**
