@@ -9,6 +9,7 @@ import com.smk.shop.model.CartItem;
 import com.smk.shop.model.Order;
 import com.smk.shop.model.Product;
 import com.smk.shop.model.User;
+import com.smk.shop.service.OrderService;
 import com.smk.shop.servlet.CartServlet;
 import com.smk.shop.util.DbTestUtil;
 import com.smk.shop.util.DbUtil;
@@ -35,6 +36,7 @@ public class ShopIntegrationTest {
     private final ProductDao productDao = new ProductDao();
     private final CartDao cartDao = new CartDao();
     private final OrderDao orderDao = new OrderDao();
+    private final OrderService orderService = new OrderService();
     private final CartServlet cartServlet = new CartServlet();
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -157,7 +159,7 @@ public class ShopIntegrationTest {
         cartDao.addToCart(user.getId(), 2, 1);
 
         // Checkout
-        Order order = orderDao.checkout(user.getId());
+        Order order = orderService.checkout(user.getId());
         assertNotNull(order);
         assertEquals(0, new BigDecimal("867.00").compareTo(order.getTotalPrice()));
         assertEquals("PAID", order.getStatus());
@@ -190,7 +192,7 @@ public class ShopIntegrationTest {
 
         // Checkout should fail
         assertThrows(Exception.class, () -> {
-            orderDao.checkout(user.getId());
+            orderService.checkout(user.getId());
         });
 
         // Verify stock is NOT deducted
@@ -216,7 +218,7 @@ public class ShopIntegrationTest {
 
         // Checkout should fail
         assertThrows(Exception.class, () -> {
-            orderDao.checkout(user.getId());
+            orderService.checkout(user.getId());
         });
 
         // Verify stock is NOT deducted
@@ -255,7 +257,7 @@ public class ShopIntegrationTest {
             executor.submit(() -> {
                 try {
                     startLatch.await(); // Wait for all threads to be ready
-                    orderDao.checkout(u.getId());
+                    orderService.checkout(u.getId());
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failureCount.incrementAndGet();
@@ -313,7 +315,7 @@ public class ShopIntegrationTest {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                orderDao.checkout(userA.getId());
+                orderService.checkout(userA.getId());
                 successCount.incrementAndGet();
             } catch (Throwable e) {
                 exceptions.add(e);
@@ -325,7 +327,7 @@ public class ShopIntegrationTest {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                orderDao.checkout(userB.getId());
+                orderService.checkout(userB.getId());
                 successCount.incrementAndGet();
             } catch (Throwable e) {
                 exceptions.add(e);

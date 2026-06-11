@@ -67,6 +67,32 @@ public class ProductDao {
         return false;
     }
 
+    public int getStockForUpdate(Connection conn, int id) throws SQLException {
+        String sql = "SELECT stock FROM products WHERE id = ? FOR UPDATE";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("stock");
+                } else {
+                    throw new SQLException("Product not found: " + id);
+                }
+            }
+        }
+    }
+
+    public void deductStock(Connection conn, int id, int quantity) throws SQLException {
+        String sql = "UPDATE products SET stock = stock - ? WHERE id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setInt(2, id);
+            int updated = ps.executeUpdate();
+            if (updated == 0) {
+                throw new SQLException("Failed to deduct stock for product: " + id);
+            }
+        }
+    }
+
     private Product mapProduct(ResultSet rs) throws SQLException {
         return new Product(
             rs.getInt("id"),

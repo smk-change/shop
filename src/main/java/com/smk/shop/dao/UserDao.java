@@ -92,6 +92,32 @@ public class UserDao {
         return false;
     }
 
+    public BigDecimal getBalanceForUpdate(Connection conn, int userId) throws SQLException {
+        String sql = "SELECT balance FROM users WHERE id = ? FOR UPDATE";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBigDecimal("balance");
+                } else {
+                    throw new SQLException("User not found: " + userId);
+                }
+            }
+        }
+    }
+
+    public void deductBalance(Connection conn, int userId, BigDecimal amount) throws SQLException {
+        String sql = "UPDATE users SET balance = balance - ? WHERE id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setBigDecimal(1, amount);
+            ps.setInt(2, userId);
+            int updated = ps.executeUpdate();
+            if (updated == 0) {
+                throw new SQLException("Failed to deduct balance for user: " + userId);
+            }
+        }
+    }
+
     private User mapUser(ResultSet rs) throws SQLException {
         return new User(
             rs.getInt("id"),

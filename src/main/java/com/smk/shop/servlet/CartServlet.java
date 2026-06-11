@@ -1,7 +1,6 @@
 package com.smk.shop.servlet;
 
-import com.smk.shop.dao.CartDao;
-import com.smk.shop.dao.ProductDao;
+import com.smk.shop.service.CartService;
 import com.smk.shop.model.CartItem;
 import com.smk.shop.model.Product;
 import com.smk.shop.model.User;
@@ -17,8 +16,7 @@ import javax.servlet.http.HttpSession;
 @WebServlet("/api/cart")
 public class CartServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
-    private final CartDao cartDao = new CartDao();
-    private final ProductDao productDao = new ProductDao();
+    private final CartService cartService = new CartService();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -29,7 +27,7 @@ public class CartServlet extends BaseServlet {
         }
 
         User user = (User) session.getAttribute("user");
-        List<CartItem> cartItems = cartDao.getCartItems(user.getId());
+        List<CartItem> cartItems = cartService.getCartItems(user.getId());
         sendJson(resp, cartItems);
     }
 
@@ -62,54 +60,27 @@ public class CartServlet extends BaseServlet {
         int productId = Integer.parseInt(prodIdObj.toString());
         int quantity = Integer.parseInt(qtyObj.toString());
 
-        Product product = productDao.getProductById(productId);
-        if (product == null) {
-            sendError(resp, HttpServletResponse.SC_NOT_FOUND, "Product not found.");
-            return;
-        }
-
-        int targetQuantity;
-        if ("update".equalsIgnoreCase(action)) {
-            if (quantity < 0) {
-                sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Quantity cannot be negative.");
-                return;
+        try {
+            boolean success;
+            if ("update".equalsIgnoreCase(action)) {
+                success = cartService.updateQuantity(user.getId(), productId, quantity);
+            } else {
+                success = cartService.addToCart(user.getId(), productId, quantity);
             }
-            targetQuantity = quantity;
-        } else {
-            // Default is "add"
-            if (quantity <= 0) {
-                sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Quantity to add must be positive.");
-                return;
+
+            if (success) {
+                sendJson(resp, cartService.getCartItems(user.getId()));
+            } else {
+                sendError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Cart operation failed.");
             }
-            int existingQuantity = 0;
-            List<CartItem> cartItems = cartDao.getCartItems(user.getId());
-            for (CartItem item : cartItems) {
-                if (item.getProduct().getId() == productId) {
-                    existingQuantity = item.getQuantity();
-                    break;
-                }
+        } catch (IllegalArgumentException e) {
+            if ("Product not found.".equals(e.getMessage())) {
+                sendError(resp, HttpServletResponse.SC_NOT_FOUND, e.getMessage());
+            } else {
+                sendError(resp, HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
             }
-            targetQuantity = existingQuantity + quantity;
-        }
-
-        // Verify stock before modifying cart
-        if (targetQuantity > product.getStock()) {
-            sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Insufficient stock. Only " + product.getStock() + " units available.");
-            return;
-        }
-
-        boolean success;
-        if ("update".equalsIgnoreCase(action)) {
-            success = cartDao.updateQuantity(user.getId(), productId, quantity);
-        } else {
-            // Default is "add"
-            success = cartDao.addToCart(user.getId(), productId, quantity);
-        }
-
-        if (success) {
-            sendJson(resp, cartDao.getCartItems(user.getId()));
-        } else {
-            sendError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Cart operation failed.");
+        } catch (Exception e) {
+            sendError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -130,8 +101,8 @@ public class CartServlet extends BaseServlet {
 
         try {
             int productId = Integer.parseInt(productIdStr);
-            if (cartDao.removeCartItem(user.getId(), productId)) {
-                sendJson(resp, cartDao.getCartItems(user.getId()));
+            if (cartService.removeCartItem(user.getId(), productId)) {
+                sendJson(resp, cartService.getCartItems(user.getId()));
             } else {
                 sendError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to remove item from cart.");
             }

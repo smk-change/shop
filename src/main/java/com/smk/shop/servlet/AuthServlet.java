@@ -1,6 +1,6 @@
 package com.smk.shop.servlet;
 
-import com.smk.shop.dao.UserDao;
+import com.smk.shop.service.UserService;
 import com.smk.shop.model.User;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -14,7 +14,7 @@ import javax.servlet.http.HttpSession;
 @WebServlet("/api/auth/*")
 public class AuthServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
-    private final UserDao userDao = new UserDao();
+    private final UserService userService = new UserService();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -51,7 +51,7 @@ public class AuthServlet extends BaseServlet {
 
         User sessionUser = (User) session.getAttribute("user");
         // Reload from database to ensure fresh balance
-        User freshUser = userDao.findById(sessionUser.getId());
+        User freshUser = userService.getUserById(sessionUser.getId());
         if (freshUser == null) {
             session.invalidate();
             sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "User not found.");
@@ -75,8 +75,8 @@ public class AuthServlet extends BaseServlet {
             return;
         }
 
-        User user = userDao.findByUsername(username.trim());
-        if (user == null || !user.getPassword().equals(password)) {
+        User user = userService.login(username, password);
+        if (user == null) {
             sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Invalid username or password.");
             return;
         }
@@ -100,7 +100,7 @@ public class AuthServlet extends BaseServlet {
             return;
         }
 
-        User existing = userDao.findByUsername(username.trim());
+        User existing = userService.getUserByUsername(username.trim());
         if (existing != null) {
             sendError(resp, HttpServletResponse.SC_CONFLICT, "Username is already taken.");
             return;
@@ -112,7 +112,7 @@ public class AuthServlet extends BaseServlet {
         newUser.setEmail(email != null ? email.trim() : null);
         newUser.setBalance(new BigDecimal("1000.00")); // Initial balance
 
-        if (userDao.create(newUser)) {
+        if (userService.register(newUser)) {
             HttpSession session = req.getSession(true);
             session.setAttribute("user", newUser);
             newUser.setPassword(null);
@@ -157,8 +157,8 @@ public class AuthServlet extends BaseServlet {
         }
 
         User sessionUser = (User) session.getAttribute("user");
-        if (userDao.recharge(sessionUser.getId(), amount)) {
-            User freshUser = userDao.findById(sessionUser.getId());
+        if (userService.recharge(sessionUser.getId(), amount)) {
+            User freshUser = userService.getUserById(sessionUser.getId());
             session.setAttribute("user", freshUser);
             freshUser.setPassword(null);
             sendJson(resp, freshUser);

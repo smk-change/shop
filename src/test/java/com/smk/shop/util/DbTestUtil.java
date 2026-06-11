@@ -16,6 +16,16 @@ public class DbTestUtil {
             // Ensure data source is initialized
             DbUtil.initializeDataSource();
 
+            // Explicitly drop tables for unit/integration tests to ensure a clean state
+            try (Connection conn = DbUtil.getConnection();
+                 Statement stmt = conn.createStatement()) {
+                stmt.execute("DROP TABLE IF EXISTS order_items");
+                stmt.execute("DROP TABLE IF EXISTS orders");
+                stmt.execute("DROP TABLE IF EXISTS cart_items");
+                stmt.execute("DROP TABLE IF EXISTS products");
+                stmt.execute("DROP TABLE IF EXISTS users");
+            }
+
             try (InputStream is = DbTestUtil.class.getClassLoader().getResourceAsStream("schema.sql")) {
                 if (is == null) {
                     throw new RuntimeException("Cannot find schema.sql in classpath!");

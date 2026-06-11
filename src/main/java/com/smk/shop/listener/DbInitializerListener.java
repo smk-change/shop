@@ -48,32 +48,42 @@ public class DbInitializerListener implements ServletContextListener {
             System.out.println("[DbInitializerListener] Initializing HikariCP data source...");
             DbUtil.initializeDataSource();
 
-            // 3. Execute schema.sql to create tables and insert mock products
-            System.out.println("[DbInitializerListener] Executing schema.sql to initialize tables...");
-            try (InputStream is = getClass().getClassLoader().getResourceAsStream("schema.sql")) {
-                if (is == null) {
-                    throw new RuntimeException("Cannot find schema.sql in classpath!");
-                }
-                
-                String sql = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
-                        .lines()
-                        .collect(Collectors.joining("\n"));
+            // Check if the database has already been initialized (i.e. 'users' table exists)
+            boolean alreadyInitialized = false;
+            try (Connection conn = DbUtil.getConnection()) {
+                alreadyInitialized = checkIfTableExists(conn, "users");
+            }
 
-                // Strip single-line and multi-line comments
-                String cleanSql = sql.replaceAll("(?m)^\\s*--.*$", "")
-                                     .replaceAll("(?s)/\\*.*?\\*/", "");
-                
-                String[] statements = cleanSql.split(";");
-                try (Connection conn = DbUtil.getConnection();
-                     Statement stmt = conn.createStatement()) {
-                    
-                    for (String sqlStmt : statements) {
-                        String trimmed = sqlStmt.trim();
-                        if (!trimmed.isEmpty()) {
-                            stmt.execute(trimmed);
-                        }
+            if (alreadyInitialized) {
+                System.out.println("[DbInitializerListener] Database tables already exist. Skipping execution of schema.sql to preserve existing data.");
+            } else {
+                // 3. Execute schema.sql to create tables and insert mock products
+                System.out.println("[DbInitializerListener] Executing schema.sql to initialize tables...");
+                try (InputStream is = getClass().getClassLoader().getResourceAsStream("schema.sql")) {
+                    if (is == null) {
+                        throw new RuntimeException("Cannot find schema.sql in classpath!");
                     }
-                    System.out.println("[DbInitializerListener] schema.sql executed successfully.");
+                    
+                    String sql = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
+                            .lines()
+                            .collect(Collectors.joining("\n"));
+
+                    // Strip single-line and multi-line comments
+                    String cleanSql = sql.replaceAll("(?m)^\\s*--.*$", "")
+                                         .replaceAll("(?s)/\\*.*?\\*/", "");
+                    
+                    String[] statements = cleanSql.split(";");
+                    try (Connection conn = DbUtil.getConnection();
+                         Statement stmt = conn.createStatement()) {
+                        
+                        for (String sqlStmt : statements) {
+                            String trimmed = sqlStmt.trim();
+                            if (!trimmed.isEmpty()) {
+                                stmt.execute(trimmed);
+                            }
+                        }
+                        System.out.println("[DbInitializerListener] schema.sql executed successfully.");
+                    }
                 }
             }
 
@@ -81,6 +91,15 @@ public class DbInitializerListener implements ServletContextListener {
             System.err.println("[DbInitializerListener] Database initialization failed!");
             e.printStackTrace();
             throw new RuntimeException(e);
+        }
+    }
+
+    private boolean checkIfTableExists(Connection conn, String tableName) {
+        try (Statement stmt = conn.createStatement();
+             var rs = stmt.executeQuery("SELECT 1 FROM " + tableName + " LIMIT 1")) {
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 

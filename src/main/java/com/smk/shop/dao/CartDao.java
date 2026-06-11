@@ -13,6 +13,15 @@ import java.util.List;
 public class CartDao {
 
     public List<CartItem> getCartItems(int userId) {
+        try (Connection conn = DbUtil.getConnection()) {
+            return getCartItems(conn, userId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<CartItem> getCartItems(Connection conn, int userId) throws SQLException {
         List<CartItem> items = new ArrayList<>();
         String sql = "SELECT c.id AS cart_id, c.user_id, c.quantity, " +
                      "p.id AS product_id, p.name, p.description, p.price, p.stock, p.image_url " +
@@ -20,8 +29,7 @@ public class CartDao {
                      "JOIN products p ON c.product_id = p.id " +
                      "WHERE c.user_id = ?";
         
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -42,11 +50,10 @@ public class CartDao {
                     items.add(item);
                 }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
         return items;
     }
+
 
     public boolean addToCart(int userId, int productId, int quantity) {
         // First check if product already in cart
@@ -115,14 +122,19 @@ public class CartDao {
     }
 
     public boolean clearCart(int userId) {
-        String sql = "DELETE FROM cart_items WHERE user_id = ?";
-        try (Connection conn = DbUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            return ps.executeUpdate() > 0;
+        try (Connection conn = DbUtil.getConnection()) {
+            return clearCart(conn, userId);
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
+    }
+
+    public boolean clearCart(Connection conn, int userId) throws SQLException {
+        String sql = "DELETE FROM cart_items WHERE user_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            return ps.executeUpdate() > 0;
+        }
     }
 }

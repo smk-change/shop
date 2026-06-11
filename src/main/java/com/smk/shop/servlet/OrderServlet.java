@@ -1,6 +1,6 @@
 package com.smk.shop.servlet;
 
-import com.smk.shop.dao.OrderDao;
+import com.smk.shop.service.OrderService;
 import com.smk.shop.model.Order;
 import com.smk.shop.model.User;
 import java.io.IOException;
@@ -14,7 +14,7 @@ import javax.servlet.http.HttpSession;
 @WebServlet("/api/orders")
 public class OrderServlet extends BaseServlet {
     private static final long serialVersionUID = 1L;
-    private final OrderDao orderDao = new OrderDao();
+    private final OrderService orderService = new OrderService();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -25,7 +25,7 @@ public class OrderServlet extends BaseServlet {
         }
 
         User user = (User) session.getAttribute("user");
-        List<Order> orders = orderDao.getOrdersByUserId(user.getId());
+        List<Order> orders = orderService.getOrdersByUserId(user.getId());
         sendJson(resp, orders);
     }
 
@@ -39,7 +39,7 @@ public class OrderServlet extends BaseServlet {
 
         User user = (User) session.getAttribute("user");
         try {
-            Order order = orderDao.checkout(user.getId());
+            Order order = orderService.checkout(user.getId());
             sendJson(resp, order);
         } catch (Exception e) {
             // Send business logic validation errors as 400 Bad Request

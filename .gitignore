@@ -6,3 +6,4 @@
 !pom.xml
 !src/
 !src/**
+./src/main/resources/db.properties
