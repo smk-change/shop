@@ -77,6 +77,9 @@ public class OrderDao {
                 throw new Exception("Insufficient balance. Order total: $" + orderTotal + ", Your balance: $" + userBalance);
             }
 
+            // Sort cart items by productId to avoid deadlock during concurrent SELECT FOR UPDATE
+            cartItems.sort((a, b) -> Integer.compare(a.productId, b.productId));
+
             // 4. Lock products and verify stock, then deduct stock
             String lockProductSql = "SELECT stock FROM products WHERE id = ? FOR UPDATE";
             String updateStockSql = "UPDATE products SET stock = stock - ? WHERE id = ?";

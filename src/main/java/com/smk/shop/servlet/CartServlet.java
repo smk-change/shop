@@ -68,8 +68,32 @@ public class CartServlet extends BaseServlet {
             return;
         }
 
-        // Verify stock before adding to cart (Optional, but good UX)
-        if (quantity > product.getStock()) {
+        int targetQuantity;
+        if ("update".equalsIgnoreCase(action)) {
+            if (quantity < 0) {
+                sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Quantity cannot be negative.");
+                return;
+            }
+            targetQuantity = quantity;
+        } else {
+            // Default is "add"
+            if (quantity <= 0) {
+                sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Quantity to add must be positive.");
+                return;
+            }
+            int existingQuantity = 0;
+            List<CartItem> cartItems = cartDao.getCartItems(user.getId());
+            for (CartItem item : cartItems) {
+                if (item.getProduct().getId() == productId) {
+                    existingQuantity = item.getQuantity();
+                    break;
+                }
+            }
+            targetQuantity = existingQuantity + quantity;
+        }
+
+        // Verify stock before modifying cart
+        if (targetQuantity > product.getStock()) {
             sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Insufficient stock. Only " + product.getStock() + " units available.");
             return;
         }
