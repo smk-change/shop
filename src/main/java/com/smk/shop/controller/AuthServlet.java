@@ -1,4 +1,4 @@
-package com.smk.shop.servlet;
+package com.smk.shop.controller;
 
 import com.smk.shop.service.UserService;
 import com.smk.shop.model.User;

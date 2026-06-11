@@ -1,4 +1,4 @@
-package com.smk.shop.servlet;
+package com.smk.shop.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;

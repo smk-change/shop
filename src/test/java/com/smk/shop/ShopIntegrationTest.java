@@ -10,7 +10,7 @@ import com.smk.shop.model.Order;
 import com.smk.shop.model.Product;
 import com.smk.shop.model.User;
 import com.smk.shop.service.OrderService;
-import com.smk.shop.servlet.CartServlet;
+import com.smk.shop.controller.CartServlet;
 import com.smk.shop.util.DbTestUtil;
 import com.smk.shop.util.DbUtil;
 import org.junit.jupiter.api.BeforeEach;
